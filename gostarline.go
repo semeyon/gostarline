@@ -227,8 +227,8 @@ func main() {
 	data := getData(*device_id, *slnetToken)
 	log.Println(data)
 	apochNow := time.Now().Unix()
-	rawEvents := getRawEvent(*device_id, *slnetToken, apochNow-24*3600, apochNow)
-	events := mapEvents(eventTypes, rawEvents.Events)
+	// rawEvents := getRawEvent(*device_id, *slnetToken, apochNow-24*3600, apochNow)
+	// events := mapEvents(eventTypes, rawEvents.Events)
 
 	log.Println("---------")
 	log.Println(events)
@@ -276,15 +276,20 @@ func main() {
 
 	ticker := time.NewTicker(1 * time.Second)
 	quit := make(chan struct{})
-	counter := 0
+
 	go func() {
 		for {
 			select {
 			case <-ticker.C:
+				rawEvents := getRawEvent(*device_id, *slnetToken, apochNow-24*3600, apochNow)
+				events := mapEvents(eventTypes, rawEvents.Events)
 				app.QueueUpdateDraw(func() {
-					list.AddItem(fmt.Sprint(counter), "", '0', nil)
+					list.Clear()
+					for _, event := range events {
+						tm := time.Unix(event.Timestamp, 0)
+						list.AddItem(tm.Format(time.RFC3339)+" > "+event.Desc, "", '0', nil)
+					}
 				})
-				counter = counter + 1
 			case <-quit:
 				ticker.Stop()
 				return
