@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/rivo/tview"
 )
 
 type RawEvent struct {
@@ -157,12 +160,13 @@ func getRawEvent(deviceId string, token string, start int64, end int64) EventsCo
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()
-	// log.Println(resp.Status)
+	log.Println(resp.Status)
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
 	json.Unmarshal(bodyBytes, &eventsContainer)
+	log.Println(string(bodyBytes))
 	log.Printf("Number of raw event: %v", len(eventsContainer.Events))
 	return eventsContainer
 }
@@ -224,11 +228,85 @@ func main() {
 	log.Println(data)
 	apochNow := time.Now().Unix()
 	rawEvents := getRawEvent(*device_id, *slnetToken, apochNow-24*3600, apochNow)
-	// log.Println(rawEvents)
-
 	events := mapEvents(eventTypes, rawEvents.Events)
+
 	log.Println("---------")
 	log.Println(events)
+
+	app := tview.NewApplication()
+
+	list := tview.NewList()
+	list.ShowSecondaryText(false).
+		SetBorder(true).
+		SetTitle("Events Today")
+
+	rawEvents2 := getRawEvent(*device_id, *slnetToken, apochNow-48*3600, apochNow-24*3600)
+	events2 := mapEvents(eventTypes, rawEvents2.Events)
+
+	list2 := tview.NewList()
+	list2.SetBorder(true).SetTitle("Events Yesterday")
+	list2.ShowSecondaryText(false)
+	for _, event := range events2 {
+		tm := time.Unix(event.Timestamp, 0)
+		list2.AddItem(tm.Format(time.RFC3339)+" > "+event.Desc, "", '0', nil)
+	}
+
+	rawEvents3 := getRawEvent(*device_id, *slnetToken, apochNow-72*3600, apochNow-48*3600)
+	events3 := mapEvents(eventTypes, rawEvents3.Events)
+
+	list3 := tview.NewList()
+	list3.SetBorder(true).SetTitle("Events 48 hours ago")
+	list3.ShowSecondaryText(false)
+	for _, event := range events3 {
+		tm := time.Unix(event.Timestamp, 0)
+		list3.AddItem(tm.Format(time.RFC3339)+" > "+event.Desc, "", '0', nil)
+	}
+
+	textView := tview.NewTextView()
+	textView.SetBorder(true).SetTitle("Data")
+	// textView.SetText(data)
+	fmt.Fprintf(textView, "%d ", data)
+
+	flex := tview.NewFlex().SetDirection(tview.FlexRow).
+		AddItem(textView, 0, 1, false).
+		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
+			AddItem(list, 0, 3, false).
+			AddItem(list2, 0, 3, false).
+			AddItem(list3, 0, 3, false), 0, 5, false)
+
+	ticker := time.NewTicker(1 * time.Second)
+	quit := make(chan struct{})
+	counter := 0
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				app.QueueUpdateDraw(func() {
+					list.AddItem(fmt.Sprint(counter), "", '0', nil)
+				})
+				counter = counter + 1
+			case <-quit:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+
+	// go func() {
+	// 	app.QueueUpdateDraw(func() {
+	// 		time.Sleep(10 * time.Second)
+	// 		for _, event := range events {
+	// 			tm := time.Unix(event.Timestamp, 0)
+	// 			list.AddItem(tm.Format(time.RFC3339)+" > "+event.Desc, "", '0', nil)
+	// 		}
+
+	// 	})
+
+	// }()
+
+	if err := app.SetRoot(flex, true).SetFocus(flex).Run(); err != nil {
+		panic(err)
+	}
 
 	// Get events from the starline server
 }
