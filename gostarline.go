@@ -14,7 +14,8 @@ import (
 )
 
 const RU_TIME_FORMAT = "15:04:05"
-const DATA_VIEW_TITLE = "Data"
+
+// const DATA_VIEW_TITLE = "Data"
 const BASE_EVENTS_TYPES_URL = "https://developer.starline.ru/json/v3/library/events"
 const DEVICES_EVENTS_URL = "https://developer.starline.ru/json/v2/device/%s/events"
 const DEVICE_DATA_URL = "https://developer.starline.ru/json/v3/device/%s/data"
@@ -133,23 +134,23 @@ type State struct {
 }
 
 type InnerData struct {
-	Common     Common          `json:"common"`
-	Event      InnerEvent      `json:"event"`
-	AlarmState InnerAlarmState `json:"alarm_state"`
-	OBD        OBD             `json:"obd"`
-	Position   Position        `json:"position"`
-	// State           State           `json:"state"`
-	Balance         []Balance `json:"balance"`
-	Telephone       string    `json:"telephone"`
-	FirmwareVersion string    `json:"firmware_version"`
-	Status          int       `json:"status"`
-	UaUrl           string    `json:"ua_url"`
-	Sn              string    `json:"sn"`
-	Type            string    `json:"type"`
-	Alias           string    `json:"alias"`
-	DeviceId        string    `json:"device_id"`
-	ActivityTs      int64     `json:"activity_ts"`
-	Typename        string    `json:"typename"`
+	Common          Common          `json:"common"`
+	Event           InnerEvent      `json:"event"`
+	AlarmState      InnerAlarmState `json:"alarm_state"`
+	OBD             OBD             `json:"obd"`
+	Position        Position        `json:"position"`
+	State           State           `json:"state"`
+	Balance         []Balance       `json:"balance"`
+	Telephone       string          `json:"telephone"`
+	FirmwareVersion string          `json:"firmware_version"`
+	Status          int             `json:"status"`
+	UaUrl           string          `json:"ua_url"`
+	Sn              string          `json:"sn"`
+	Type            string          `json:"type"`
+	Alias           string          `json:"alias"`
+	DeviceId        string          `json:"device_id"`
+	ActivityTs      int64           `json:"activity_ts"`
+	Typename        string          `json:"typename"`
 }
 
 type Data struct {
@@ -298,16 +299,32 @@ func initNewTextView() *tview.TextView {
 	return list
 }
 
-func initNewDataTextView() *tview.TextView {
+func initNewDataTextView(drawData InnerData) *tview.TextView {
+	title := fmt.Sprintf("[[blue]%s%s %s %s[white]]", drawData.Typename, drawData.Type, drawData.Alias, drawData.FirmwareVersion)
 	textView := tview.NewTextView()
-	textView.SetBorder(true).SetTitle(DATA_VIEW_TITLE)
+	textView.SetBorder(true).SetTitle(title)
 	textView.SetDynamicColors(true).SetRegions(true)
 	return textView
 }
 
+func getCurrency(b Balance) string {
+	if (b.Currency == "") || (b.Currency == "RUB") {
+		return "₽"
+	} else {
+		return b.Currency
+	}
+}
+
 func drawDataTextView(textView *tview.TextView, data Data, eventTypes []EventType) {
+	var balances []string
 	textView.Clear()
 	drawData := data.Data
+	balancesArr := drawData.Balance
+	for _, balance := range balancesArr {
+		bTime := getStandartTimeFormat(int64(balance.Ts))
+		bCur := getCurrency(balance)
+		balances = append(balances, fmt.Sprintf("%s: %s%d @%s", balance.Key, bCur, balance.Value, bTime))
+	}
 	currentState := getEventById(eventTypes, drawData.Event.Type)
 	movingState := getMovingState(drawData.Position.IsMove)
 	requestTime := getStandartTimeFormat(drawData.ActivityTs)
@@ -315,12 +332,12 @@ func drawDataTextView(textView *tview.TextView, data Data, eventTypes []EventTyp
 	odbTime := getStandartTimeFormat(int64(drawData.OBD.Ts))
 	commonTime := getStandartTimeFormat(int64(drawData.Common.Ts))
 	stateTime := getStandartTimeFormat(int64(drawData.Event.Timestamp))
-	fmt.Fprintf(textView, "[blue]%s%s %s %s\n", drawData.Typename, drawData.Type, drawData.Alias, drawData.FirmwareVersion)
 	fmt.Fprintf(textView, "[bold]Request status: [white]%d %s @%s\n", data.Code, data.CodeString, requestTime)
 	fmt.Fprintf(textView, "[bold]Position: [white]%f, %f %s @%s\n", drawData.Position.X, drawData.Position.Y, movingState, positionTime)
 	fmt.Fprintf(textView, "[bold]ODB: [white]%d litres, %d km @%s\n", drawData.OBD.FuelLitres, drawData.OBD.Mileage, odbTime)
-	fmt.Fprintf(textView, "[bold]Common: [white]Auto: %d°C, Engine: %d°C, %fV, GPS:%d, GSM:%d @%s\n", drawData.Common.CTemp, drawData.Common.Etemp, drawData.Common.Battery, drawData.Common.GpsLvl, drawData.Common.GsmLvl, commonTime)
-	fmt.Fprintf(textView, "[bold]State: [white]%s @%s\n", currentState, stateTime)
+	fmt.Fprintf(textView, "[bold]Common: [white]Auto: %d°C, Engine: %d°C, %.2fV, GPS:%.1f, GSM:%.1f @%s\n", drawData.Common.CTemp, drawData.Common.Etemp, drawData.Common.Battery, drawData.Common.GpsLvl, drawData.Common.GsmLvl, commonTime)
+	fmt.Fprintf(textView, "[bold]Billing: [white]%s @%s\n", currentState, stateTime)
+	fmt.Fprintf(textView, "[bold]State: [white]%s\n", balances)
 }
 
 func drawListView(list *tview.TextView, titleFormat string, rawEvents EventsContainer, events []Event) {
@@ -355,9 +372,9 @@ func main() {
 
 	app := tview.NewApplication()
 
-	textView := initNewDataTextView()
 	eventTypes := getEvents()
 	data := getData(*device_id, *slnetToken)
+	textView := initNewDataTextView(data.Data)
 	drawDataTextView(textView, data, eventTypes)
 
 	list := initNewTextView()
