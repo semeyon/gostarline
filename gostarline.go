@@ -305,25 +305,14 @@ func main() {
 	list := tview.NewTextView()
 	list.SetBorder(true)
 	list.SetDynamicColors(true).SetRegions(true)
-	// list := tview.NewList()
-	// list.ShowSecondaryText(false).
-	// 	SetBorder(true).
-	// 	SetTitle("Events Today (?)")
-
-	// list.SetHighlightFullLine(false)
-	// list.SetWrapAround(false)
-
 	rawEvents := getRawEvent(*device_id, *slnetToken, startdTsUnix, endTsUnix)
 	events := mapEvents(eventTypes, rawEvents.Events)
 	list.SetTitle(fmt.Sprintf("Events Today (%d)@%s", len(events), now.Format(time.RFC3339)))
-	// count = count + 1
 	fmt.Fprintf(list, "[blue]%d %s\n", rawEvents.Code, rawEvents.CodeString)
-
-	// list.AddItem(fmt.Sprintf("%d", rawEvents.Code)+" | "+rawEvents.CodeString, "", '0', nil)
 	for _, event := range events {
 		tm := time.Unix(event.Timestamp, 0)
-		// list.AddItem(tm.Format(time.RFC3339)+" > "+event.Desc, "", '0', nil)
-		fmt.Fprintf(list, "[white]%s %s\n", tm.Format(time.RFC3339), event.Desc)
+		// TODO: Move to a function
+		fmt.Fprintf(list, "[white]%s > %s\n", tm.Format(RU_TIME_FORMAT), event.Desc)
 	}
 
 	rawEvents2 := getRawEvent(*device_id, *slnetToken, startdTsUnix-48*3600, endTsUnix-24*3600)
@@ -349,6 +338,21 @@ func main() {
 		list3.AddItem(tm.Format(time.RFC3339)+" > "+event.Desc, "", '0', nil)
 	}
 
+	list4 := tview.NewTextView()
+	list4.SetBorder(true)
+	list4.SetDynamicColors(true).SetRegions(true)
+
+	rawEvents4 := getRawEvent(*device_id, *slnetToken, startdTsUnix-96*3600, endTsUnix-72*3600)
+	events4 := mapEvents(eventTypes, rawEvents4.Events)
+	list4.SetTitle(fmt.Sprintf("Events Today (%d)@%s", len(events4), now.Format(time.RFC3339)))
+	fmt.Fprintf(list4, "[blue]%d %s\n", rawEvents4.Code, rawEvents4.CodeString)
+
+	for _, event := range events4 {
+		tm := time.Unix(event.Timestamp, 0)
+		// TODO: Move to a function
+		fmt.Fprintf(list4, "[white]%s %s\n", tm.Format(RU_TIME_FORMAT), event.Desc)
+	}
+
 	textView := tview.NewTextView()
 	textView.SetBorder(true).SetTitle("Data")
 	textView.SetDynamicColors(true).SetRegions(true)
@@ -366,7 +370,8 @@ func main() {
 		AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
 			AddItem(list, 0, 3, false).
 			AddItem(list2, 0, 3, false).
-			AddItem(list3, 0, 3, false), 0, 5, false)
+			AddItem(list3, 0, 3, false).
+			AddItem(list4, 0, 3, false), 0, 5, false)
 
 	ticker := time.NewTicker(60 * time.Second)
 	quit := make(chan struct{})
@@ -376,18 +381,19 @@ func main() {
 			select {
 			case <-ticker.C:
 				// TODO: could not update if it works 24+ hours
-				// rawEvents := getRawEvent(*device_id, *slnetToken, startdTsUnix, endTsUnix)
-				// events := mapEvents(eventTypes, rawEvents.Events)
-				// app.QueueUpdateDraw(func() {
-				// 	list.Clear()
-				// 	list.SetTitle(fmt.Sprintf("Events Today (%d)@%s", len(events), now.Format(time.RFC3339)))
-				// 	// count = count + 1
-				// 	list.AddItem(fmt.Sprintf("%d", rawEvents.Code)+" | "+rawEvents.CodeString, "", '0', nil)
-				// 	for _, event := range events {
-				// 		tm := time.Unix(event.Timestamp, 0)
-				// 		list.AddItem(tm.Format(time.RFC3339)+" > "+event.Desc, "", '0', nil)
-				// 	}
-				// })
+				rawEvents := getRawEvent(*device_id, *slnetToken, startdTsUnix, endTsUnix)
+				events := mapEvents(eventTypes, rawEvents.Events)
+				now := time.Now()
+				app.QueueUpdateDraw(func() {
+					list.Clear()
+					list.SetTitle(fmt.Sprintf("Events Today (%d)@%s", len(events), now.Format(time.RFC3339)))
+					fmt.Fprintf(list, "[blue]%d > %s[white]\n", rawEvents.Code, rawEvents.CodeString)
+					for _, event := range events {
+						tm := time.Unix(event.Timestamp, 0)
+						// TODO: Move to a function
+						fmt.Fprintf(list, "[white]%s %s\n", tm.Format(RU_TIME_FORMAT), event.Desc)
+					}
+				})
 
 				app.QueueUpdateDraw(func() {
 					textView.Clear()
