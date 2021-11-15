@@ -319,7 +319,7 @@ func drawDataTextView(textView *tview.TextView, data Data, eventTypes []EventTyp
 	fmt.Fprintf(textView, "[bold]Request status: [white]%d %s @%s\n", data.Code, data.CodeString, requestTime)
 	fmt.Fprintf(textView, "[bold]Position: [white]%f, %f %s @%s\n", drawData.Position.X, drawData.Position.Y, movingState, positionTime)
 	fmt.Fprintf(textView, "[bold]ODB: [white]%d litres, %d km @%s\n", drawData.OBD.FuelLitres, drawData.OBD.Mileage, odbTime)
-	fmt.Fprintf(textView, "[bold]Common: [white]Auto: %d°C, Engine: %d°C, %fV, GPS:%f, GSM:%f @%s\n", drawData.Common.CTemp, drawData.Common.Etemp, drawData.Common.Battery, drawData.Common.GpsLvl, drawData.Common.GsmLvl, commonTime)
+	fmt.Fprintf(textView, "[bold]Common: [white]Auto: %d°C, Engine: %d°C, %fV, GPS:%d, GSM:%d @%s\n", drawData.Common.CTemp, drawData.Common.Etemp, drawData.Common.Battery, drawData.Common.GpsLvl, drawData.Common.GsmLvl, commonTime)
 	fmt.Fprintf(textView, "[bold]State: [white]%s @%s\n", currentState, stateTime)
 }
 
