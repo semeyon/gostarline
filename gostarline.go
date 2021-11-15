@@ -302,22 +302,28 @@ func main() {
 
 	app := tview.NewApplication()
 
-	list := tview.NewList()
-	list.ShowSecondaryText(false).
-		SetBorder(true).
-		SetTitle("Events Today (?)")
+	list := tview.NewTextView()
+	list.SetBorder(true)
+	list.SetDynamicColors(true).SetRegions(true)
+	// list := tview.NewList()
+	// list.ShowSecondaryText(false).
+	// 	SetBorder(true).
+	// 	SetTitle("Events Today (?)")
 
-	list.SetHighlightFullLine(false)
-	list.SetWrapAround(false)
+	// list.SetHighlightFullLine(false)
+	// list.SetWrapAround(false)
 
 	rawEvents := getRawEvent(*device_id, *slnetToken, startdTsUnix, endTsUnix)
 	events := mapEvents(eventTypes, rawEvents.Events)
 	list.SetTitle(fmt.Sprintf("Events Today (%d)@%s", len(events), now.Format(time.RFC3339)))
 	// count = count + 1
-	list.AddItem(fmt.Sprintf("%d", rawEvents.Code)+" | "+rawEvents.CodeString, "", '0', nil)
+	fmt.Fprintf(list, "[blue]%d %s\n", rawEvents.Code, rawEvents.CodeString)
+
+	// list.AddItem(fmt.Sprintf("%d", rawEvents.Code)+" | "+rawEvents.CodeString, "", '0', nil)
 	for _, event := range events {
 		tm := time.Unix(event.Timestamp, 0)
-		list.AddItem(tm.Format(time.RFC3339)+" > "+event.Desc, "", '0', nil)
+		// list.AddItem(tm.Format(time.RFC3339)+" > "+event.Desc, "", '0', nil)
+		fmt.Fprintf(list, "[white]%s %s\n", tm.Format(time.RFC3339), event.Desc)
 	}
 
 	rawEvents2 := getRawEvent(*device_id, *slnetToken, startdTsUnix-48*3600, endTsUnix-24*3600)
@@ -370,18 +376,18 @@ func main() {
 			select {
 			case <-ticker.C:
 				// TODO: could not update if it works 24+ hours
-				rawEvents := getRawEvent(*device_id, *slnetToken, startdTsUnix, endTsUnix)
-				events := mapEvents(eventTypes, rawEvents.Events)
-				app.QueueUpdateDraw(func() {
-					list.Clear()
-					list.SetTitle(fmt.Sprintf("Events Today (%d)@%s", len(events), now.Format(time.RFC3339)))
-					// count = count + 1
-					list.AddItem(fmt.Sprintf("%d", rawEvents.Code)+" | "+rawEvents.CodeString, "", '0', nil)
-					for _, event := range events {
-						tm := time.Unix(event.Timestamp, 0)
-						list.AddItem(tm.Format(time.RFC3339)+" > "+event.Desc, "", '0', nil)
-					}
-				})
+				// rawEvents := getRawEvent(*device_id, *slnetToken, startdTsUnix, endTsUnix)
+				// events := mapEvents(eventTypes, rawEvents.Events)
+				// app.QueueUpdateDraw(func() {
+				// 	list.Clear()
+				// 	list.SetTitle(fmt.Sprintf("Events Today (%d)@%s", len(events), now.Format(time.RFC3339)))
+				// 	// count = count + 1
+				// 	list.AddItem(fmt.Sprintf("%d", rawEvents.Code)+" | "+rawEvents.CodeString, "", '0', nil)
+				// 	for _, event := range events {
+				// 		tm := time.Unix(event.Timestamp, 0)
+				// 		list.AddItem(tm.Format(time.RFC3339)+" > "+event.Desc, "", '0', nil)
+				// 	}
+				// })
 
 				app.QueueUpdateDraw(func() {
 					textView.Clear()
