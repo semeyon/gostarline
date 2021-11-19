@@ -12,4 +12,4 @@ Results:
 - Use these credentials to run https://gitlab.com/starline/openapi/-/blob/master/auth.py and generate slnet cookie token to use with the app
 - `go build`
 - `gostarline  --token=4962......26D7 --device_id=99.....99`
-- or go run . --token=4962......26D7 --device_id=99.....99`
+- or `go run . --token=4962......26D7 --device_id=99.....99`
