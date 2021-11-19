@@ -14,11 +14,7 @@ import (
 )
 
 const RU_TIME_FORMAT = "15:04:05"
-
-// const DATA_VIEW_TITLE = "Data"
-// curl "https://developer.starline.ru/json/v1/user/1827506/user_info/" --cookie 'slnet='
 const USER_UNFO_URL = "ttps://developer.starline.ru/json/v1/user/%s/user_info/"
-
 const BASE_EVENTS_TYPES_URL = "https://developer.starline.ru/json/v3/library/events"
 const DEVICES_EVENTS_URL = "https://developer.starline.ru/json/v2/device/%s/events"
 const DEVICE_DATA_URL = "https://developer.starline.ru/json/v3/device/%s/data"
@@ -186,7 +182,6 @@ func getStandartTimeFormat(ts int64) string {
 	return time.Unix(ts, 0).Format(RU_TIME_FORMAT)
 }
 
-// Get predefined events from the starline server
 func getEvents() []EventType {
 	log.Println("Request event types by " + BASE_EVENTS_TYPES_URL)
 	var eventDescriptions eventDescriptions
@@ -216,9 +211,7 @@ func getRawEvent(deviceId string, token string, start int64, end int64) EventsCo
 		Name:  COOKIE_NAME,
 		Value: token,
 	}
-	// url := "https://developer.starline.ru/json/v2/device/" + deviceId + "/events"
 	url := fmt.Sprintf(DEVICES_EVENTS_URL, deviceId)
-	// log.Printf("Request raw events %s, -d %s", url, string(bParams))
 	req, err := http.NewRequest(POST, url, bytes.NewBuffer(bParams))
 	if err != nil {
 		log.Fatal(err)
@@ -230,14 +223,11 @@ func getRawEvent(deviceId string, token string, start int64, end int64) EventsCo
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()
-	// log.Println(resp.Status)
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
 	json.Unmarshal(bodyBytes, &eventsContainer)
-	// log.Println(string(bodyBytes))
-	// log.Printf("Number of raw event: %v", len(eventsContainer.Events))
 	return eventsContainer
 }
 
@@ -247,9 +237,7 @@ func getData(deviceId string, token string) Data {
 		Name:  "slnet",
 		Value: token,
 	}
-	// url := "https://developer.starline.ru/json/v3/device/" + deviceId + "/data"
 	url := fmt.Sprintf(DEVICE_DATA_URL, deviceId)
-	// log.Printf("Request device data %s", url)
 	req, err := http.NewRequest(GET, url, nil)
 	if err != nil {
 		log.Fatal(err)
@@ -261,7 +249,6 @@ func getData(deviceId string, token string) Data {
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()
-	// log.Println(resp.Status)
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)
@@ -427,7 +414,6 @@ func main() {
 		for {
 			select {
 			case <-ticker.C:
-				// TODO: could not update if it works 24+ hours
 				rawEvents := getRawEvent(*device_id, *slnetToken, startdTsUnix, endTsUnix)
 				events := mapEvents(eventTypes, rawEvents.Events)
 				app.QueueUpdateDraw(func() {
