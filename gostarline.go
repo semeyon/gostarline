@@ -16,6 +16,9 @@ import (
 const RU_TIME_FORMAT = "15:04:05"
 
 // const DATA_VIEW_TITLE = "Data"
+// curl "https://developer.starline.ru/json/v1/user/1827506/user_info/" --cookie 'slnet='
+const USER_UNFO_URL = "ttps://developer.starline.ru/json/v1/user/%s/user_info/"
+
 const BASE_EVENTS_TYPES_URL = "https://developer.starline.ru/json/v3/library/events"
 const DEVICES_EVENTS_URL = "https://developer.starline.ru/json/v2/device/%s/events"
 const DEVICE_DATA_URL = "https://developer.starline.ru/json/v3/device/%s/data"
@@ -43,6 +46,7 @@ type eventDescriptions struct {
 
 type Event struct {
 	Code      int
+	GroupId   int
 	Desc      string
 	Timestamp int64
 }
@@ -268,14 +272,15 @@ func getData(deviceId string, token string) Data {
 
 func mapEvents(eventTypes []EventType, rawEvents []RawEvent) []Event {
 	var eventsMapped []Event
-	var eventMap = make(map[int]string)
+	var eventMap = make(map[int]EventType)
 	for _, eventType := range eventTypes {
-		eventMap[eventType.Code] = eventType.Desc
+		eventMap[eventType.Code] = eventType
 	}
 	for _, rawEvent := range rawEvents {
 		event := Event{
 			Code:      rawEvent.Type,
-			Desc:      eventMap[rawEvent.Type],
+			Desc:      eventMap[rawEvent.Type].Desc,
+			GroupId:   eventMap[rawEvent.Type].GroupId,
 			Timestamp: int64(rawEvent.Timestamp),
 		}
 		eventsMapped = append(eventsMapped, event)
@@ -325,6 +330,7 @@ func drawDataTextView(textView *tview.TextView, data Data, eventTypes []EventTyp
 		bCur := getCurrency(balance)
 		balances = append(balances, fmt.Sprintf("%s: %s%d @%s", balance.Key, bCur, balance.Value, bTime))
 	}
+
 	currentState := getEventById(eventTypes, drawData.Event.Type)
 	movingState := getMovingState(drawData.Position.IsMove)
 	requestTime := getStandartTimeFormat(drawData.ActivityTs)
@@ -333,11 +339,20 @@ func drawDataTextView(textView *tview.TextView, data Data, eventTypes []EventTyp
 	commonTime := getStandartTimeFormat(int64(drawData.Common.Ts))
 	stateTime := getStandartTimeFormat(int64(drawData.Event.Timestamp))
 	fmt.Fprintf(textView, "[bold]Request status: [white]%d %s @%s\n", data.Code, data.CodeString, requestTime)
-	fmt.Fprintf(textView, "[bold]Position: [white]%f, %f %s @%s\n", drawData.Position.X, drawData.Position.Y, movingState, positionTime)
+	fmt.Fprintf(textView, "[bold]Position: [white]%f, %f %s @%s\n", drawData.Position.Y, drawData.Position.X, movingState, positionTime)
 	fmt.Fprintf(textView, "[bold]ODB: [white]%d litres, %d km @%s\n", drawData.OBD.FuelLitres, drawData.OBD.Mileage, odbTime)
 	fmt.Fprintf(textView, "[bold]Common: [white]Auto: %d°C, Engine: %d°C, %.2fV, GPS:%.1f, GSM:%.1f @%s\n", drawData.Common.CTemp, drawData.Common.Etemp, drawData.Common.Battery, drawData.Common.GpsLvl, drawData.Common.GsmLvl, commonTime)
 	fmt.Fprintf(textView, "[bold]Billing: [white]%s @%s\n", currentState, stateTime)
 	fmt.Fprintf(textView, "[bold]State: [white]%s\n", balances)
+}
+
+func setColorOnEvenGroupId(groupId int) string {
+	if (groupId == 0) || (groupId == 2) {
+		return "[red]"
+	} else if (groupId == 3) || (groupId == 4) {
+		return "[yellow]"
+	}
+	return "[white]"
 }
 
 func drawListView(list *tview.TextView, titleFormat string, rawEvents EventsContainer, events []Event) {
@@ -348,7 +363,7 @@ func drawListView(list *tview.TextView, titleFormat string, rawEvents EventsCont
 	for _, event := range events {
 		tm := time.Unix(event.Timestamp, 0)
 		// TODO: Move to a function
-		fmt.Fprintf(list, "[white]%s > %s\n[white]", tm.Format(RU_TIME_FORMAT), event.Desc)
+		fmt.Fprintf(list, "%s%s > %s\n[white]", setColorOnEvenGroupId(event.GroupId), tm.Format(RU_TIME_FORMAT), event.Desc)
 	}
 }
 
